@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import Icon from '@/components/ui/icon';
 
 interface Product {
@@ -18,6 +19,11 @@ interface Product {
   mountingLocation: string;
   carModel: string;
   description: string;
+  articleNumber?: string;
+  weight?: string;
+  compatibility?: string[];
+  installationMethod?: string;
+  warranty?: string;
 }
 
 const Index = () => {
@@ -29,6 +35,11 @@ const Index = () => {
     carModel: ''
   });
   const [cartItems, setCartItems] = useState(0);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
+  const [isLoginDialogOpen, setIsLoginDialogOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [loginCredentials, setLoginCredentials] = useState({ username: '', password: '' });
   const [products, setProducts] = useState<Product[]>([
     {
       id: 1,
@@ -39,7 +50,12 @@ const Index = () => {
       size: '10мм',
       mountingLocation: 'панель приборов',
       carModel: 'BMW X5',
-      description: 'Оригинальная клипса для панели приборов BMW X5'
+      description: 'Оригинальная клипса для панели приборов BMW X5',
+      articleNumber: 'BMW-X5-001',
+      weight: '5г',
+      compatibility: ['BMW X5 E70 (2006-2013)', 'BMW X5 F15 (2013-2018)'],
+      installationMethod: 'Вставить до щелчка',
+      warranty: '12 месяцев'
     },
     {
       id: 2,
@@ -50,7 +66,12 @@ const Index = () => {
       size: '8мм',
       mountingLocation: 'дверная панель',
       carModel: 'Mercedes C-Class',
-      description: 'Металлическая клипса для дверных панелей Mercedes'
+      description: 'Металлическая клипса для дверных панелей Mercedes',
+      articleNumber: 'MB-C-002',
+      weight: '8г',
+      compatibility: ['Mercedes C-Class W204', 'Mercedes C-Class W205'],
+      installationMethod: 'Закрутить отверткой',
+      warranty: '24 месяца'
     },
     {
       id: 3,
@@ -163,6 +184,36 @@ const Index = () => {
     setProducts(prev => prev.filter(p => p.id !== id));
   };
 
+  const openProductDetails = (product: Product) => {
+    setSelectedProduct(product);
+    setIsProductDialogOpen(true);
+  };
+
+  const handleLogin = () => {
+    // Простая авторизация для демонстрации
+    if (loginCredentials.username === 'admin' && loginCredentials.password === 'admin123') {
+      setIsAdmin(true);
+      setIsLoginDialogOpen(false);
+      setActiveTab('admin');
+      setLoginCredentials({ username: '', password: '' });
+    } else {
+      alert('Неправильный логин или пароль');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAdmin(false);
+    setActiveTab('catalog');
+  };
+
+  const handleAdminAccess = () => {
+    if (isAdmin) {
+      setActiveTab('admin');
+    } else {
+      setIsLoginDialogOpen(true);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -181,7 +232,7 @@ const Index = () => {
                 </Button>
                 <Button 
                   variant="ghost" 
-                  onClick={() => setActiveTab('admin')}
+                  onClick={handleAdminAccess}
                   className={activeTab === 'admin' ? 'text-black' : 'text-gray-600'}
                 >
                   Админ-панель
@@ -191,6 +242,11 @@ const Index = () => {
               </nav>
             </div>
             <div className="flex items-center space-x-4">
+              {isAdmin && (
+                <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-600">
+                  Выйти
+                </Button>
+              )}
               <Button variant="ghost" size="sm" className="relative">
                 <Icon name="ShoppingBag" size={20} />
                 {cartItems > 0 && (
@@ -323,7 +379,7 @@ const Index = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {filteredProducts.map(product => (
                   <Card key={product.id} className="group cursor-pointer border-0 shadow-sm hover:shadow-lg transition-shadow">
-                    <div className="aspect-square overflow-hidden bg-gray-50 rounded-t-lg">
+                    <div className="aspect-square overflow-hidden bg-gray-50 rounded-t-lg" onClick={() => openProductDetails(product)}>
                       <img 
                         src={product.image} 
                         alt={product.name}
@@ -331,7 +387,7 @@ const Index = () => {
                       />
                     </div>
                     <CardContent className="p-6">
-                      <h3 className="font-semibold text-lg text-black mb-2">{product.name}</h3>
+                      <h3 className="font-semibold text-lg text-black mb-2 cursor-pointer" onClick={() => openProductDetails(product)}>{product.name}</h3>
                       <p className="text-sm text-gray-600 mb-3">{product.description}</p>
                       <div className="flex gap-2 mb-3 flex-wrap">
                         <Badge variant="outline" className="text-xs">{product.material}</Badge>
@@ -339,11 +395,16 @@ const Index = () => {
                         <Badge variant="outline" className="text-xs">{product.mountingLocation}</Badge>
                         <Badge variant="outline" className="text-xs">{product.carModel}</Badge>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-2xl font-bold text-black">{product.price} ₽</span>
-                        <Button onClick={addToCart} className="bg-black text-white hover:bg-gray-800">
-                          В корзину
-                        </Button>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xl font-bold text-black">{product.price} ₽</span>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" onClick={() => openProductDetails(product)}>
+                            Подробнее
+                          </Button>
+                          <Button onClick={addToCart} className="bg-black text-white hover:bg-gray-800" size="sm">
+                            В корзину
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -364,10 +425,24 @@ const Index = () => {
 
         {/* Admin Panel Tab */}
         <TabsContent value="admin">
+          {!isAdmin ? (
+            <div className="py-20 text-center">
+              <h2 className="text-3xl font-bold text-black mb-4">Доступ запрещен</h2>
+              <p className="text-gray-600 mb-8">Для доступа к админ-панели необходимо войти в систему</p>
+              <Button onClick={() => setIsLoginDialogOpen(true)} className="bg-black text-white hover:bg-gray-800">
+                Войти
+              </Button>
+            </div>
+          ) : (
           <section className="py-16">
             <div className="container mx-auto px-4">
               <div className="max-w-4xl mx-auto">
-                <h2 className="text-3xl font-bold text-black mb-8">Админ-панель</h2>
+                <div className="flex justify-between items-center mb-8">
+                  <h2 className="text-3xl font-bold text-black">Админ-панель</h2>
+                  <Badge variant="outline" className="text-green-600 border-green-600">
+                    Авторизован
+                  </Badge>
+                </div>
                 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   {/* Add Product Form */}
@@ -504,6 +579,7 @@ const Index = () => {
               </div>
             </div>
           </section>
+          )}
         </TabsContent>
       </Tabs>
 
@@ -589,6 +665,150 @@ const Index = () => {
           </div>
         </div>
       </footer>
+
+      {/* Product Details Dialog */}
+      <Dialog open={isProductDialogOpen} onOpenChange={setIsProductDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{selectedProduct?.name}</DialogTitle>
+          </DialogHeader>
+          {selectedProduct && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <img 
+                    src={selectedProduct.image} 
+                    alt={selectedProduct.name}
+                    className="w-full h-64 object-cover rounded-lg bg-gray-50"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="font-semibold text-lg mb-2">{selectedProduct.name}</h3>
+                    <p className="text-3xl font-bold text-black">{selectedProduct.price} ₽</p>
+                  </div>
+                  
+                  <div className="flex gap-2 flex-wrap">
+                    <Badge variant="outline">{selectedProduct.material}</Badge>
+                    <Badge variant="outline">{selectedProduct.size}</Badge>
+                    <Badge variant="outline">{selectedProduct.mountingLocation}</Badge>
+                    <Badge variant="outline">{selectedProduct.carModel}</Badge>
+                  </div>
+                  
+                  <Button onClick={addToCart} className="w-full bg-black text-white hover:bg-gray-800">
+                    Добавить в корзину
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-semibold mb-2">Описание</h4>
+                  <p className="text-gray-600">{selectedProduct.description}</p>
+                </div>
+                
+                {selectedProduct.articleNumber && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h4 className="font-semibold mb-2">Технические характеристики</h4>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Артикул:</span>
+                          <span className="font-mono">{selectedProduct.articleNumber}</span>
+                        </div>
+                        {selectedProduct.weight && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Вес:</span>
+                            <span>{selectedProduct.weight}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Материал:</span>
+                          <span>{selectedProduct.material}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Размер:</span>
+                          <span>{selectedProduct.size}</span>
+                        </div>
+                        {selectedProduct.warranty && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Гарантия:</span>
+                            <span>{selectedProduct.warranty}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      {selectedProduct.compatibility && (
+                        <div className="mb-4">
+                          <h4 className="font-semibold mb-2">Совместимость</h4>
+                          <div className="space-y-1 text-sm">
+                            {selectedProduct.compatibility.map((model, index) => (
+                              <div key={index} className="text-gray-600">• {model}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {selectedProduct.installationMethod && (
+                        <div>
+                          <h4 className="font-semibold mb-2">Монтаж</h4>
+                          <p className="text-sm text-gray-600">{selectedProduct.installationMethod}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Login Dialog */}
+      <Dialog open={isLoginDialogOpen} onOpenChange={setIsLoginDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Вход в админ-панель</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="username">Логин</Label>
+              <Input
+                id="username"
+                value={loginCredentials.username}
+                onChange={(e) => setLoginCredentials(prev => ({...prev, username: e.target.value}))}
+                placeholder="Введите логин"
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Пароль</Label>
+              <Input
+                id="password"
+                type="password"
+                value={loginCredentials.password}
+                onChange={(e) => setLoginCredentials(prev => ({...prev, password: e.target.value}))}
+                placeholder="Введите пароль"
+              />
+            </div>
+            <div className="text-xs text-gray-500 p-3 bg-gray-50 rounded">
+              Демо данные:<br/>
+              Логин: <code>admin</code><br/>
+              Пароль: <code>admin123</code>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => setIsLoginDialogOpen(false)} variant="outline" className="flex-1">
+                Отмена
+              </Button>
+              <Button onClick={handleLogin} className="flex-1 bg-black text-white hover:bg-gray-800">
+                Войти
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };
